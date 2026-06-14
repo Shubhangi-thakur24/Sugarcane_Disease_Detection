@@ -2,5 +2,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 .ipynb_checkpoints/
-resnet50_sugarcane_leaf_model.keras
 sugarcane_detector.db

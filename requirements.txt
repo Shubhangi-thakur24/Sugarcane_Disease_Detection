@@ -3,5 +3,5 @@ tensorflow
 numpy
 pandas
 plotly
-opencv-python
+opencv-python-headless
 pillow
