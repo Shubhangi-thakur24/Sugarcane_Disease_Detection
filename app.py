@@ -674,9 +674,16 @@ def init_db():
             location TEXT NOT NULL,
             rating INTEGER NOT NULL,
             feedback TEXT NOT NULL,
-            date TEXT NOT NULL
+            date TEXT NOT NULL,
+            user_email TEXT
         )
     """)
+    
+    # Migration to add user_email column if it does not exist
+    cursor.execute("PRAGMA table_info(feedback)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if "user_email" not in columns:
+        cursor.execute("ALTER TABLE feedback ADD COLUMN user_email TEXT")
     
     # Seed admin user & mock data if db is empty
     cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
@@ -754,12 +761,46 @@ def get_scans(user_email):
         })
     return history
 
-def add_feedback(name, location, rating, feedback_text):
+def get_user_feedback(user_email):
+    if not user_email:
+        return None
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, location, rating, feedback, date FROM feedback WHERE user_email = ?", (user_email,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {
+            "name": row[0],
+            "location": row[1],
+            "rating": row[2],
+            "feedback": row[3],
+            "date": datetime.strptime(row[4], "%Y-%m-%d %H:%M:%S")
+        }
+    return None
+
+def save_or_update_feedback(user_email, name, location, rating, feedback_text):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute("INSERT INTO feedback (name, location, rating, feedback, date) VALUES (?, ?, ?, ?, ?)",
-                   (name, location, rating, feedback_text, date_str))
+    
+    if user_email:
+        cursor.execute("SELECT id FROM feedback WHERE user_email = ?", (user_email,))
+        row = cursor.fetchone()
+        if row:
+            cursor.execute("""
+                UPDATE feedback 
+                SET name = ?, location = ?, rating = ?, feedback = ?, date = ? 
+                WHERE user_email = ?
+            """, (name, location, rating, feedback_text, date_str, user_email))
+            conn.commit()
+            conn.close()
+            return
+            
+    cursor.execute("""
+        INSERT INTO feedback (name, location, rating, feedback, date, user_email) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (name, location, rating, feedback_text, date_str, user_email))
     conn.commit()
     conn.close()
 
@@ -1004,18 +1045,16 @@ def show_disease_detection():
     st.markdown(f"<h1 class='main-title'>{translate('disease_detection')}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p class='sub-title'>{translate('upload_instruction')}</p>", unsafe_allow_html=True)
 
-    col_upload, col_cam = st.columns(2)
+    tab_upload, tab_cam = st.tabs([translate("choose_image"), translate("take_photo")])
     file_bytes = None
 
-    with col_upload:
-        st.subheader(translate('choose_image'))
-        uploaded_file = st.file_uploader(translate('choose_image'), type=["jpg", "jpeg", "png"], key="disease_file_uploader", label_visibility="collapsed")
+    with tab_upload:
+        uploaded_file = st.file_uploader(translate("choose_image"), type=["jpg", "jpeg", "png"], key="disease_file_uploader", label_visibility="collapsed")
         if uploaded_file:
             file_bytes = uploaded_file.read()
 
-    with col_cam:
-        st.subheader(translate('take_photo'))
-        camera_file = st.camera_input(translate('take_photo'), key="disease_camera_input", label_visibility="collapsed")
+    with tab_cam:
+        camera_file = st.camera_input(translate("take_photo"), key="disease_camera_input", label_visibility="collapsed")
         if camera_file:
             file_bytes = camera_file.read()
 
@@ -1230,18 +1269,36 @@ def show_feedback():
         )
 
     st.markdown("---")
-    st.subheader(translate('submit_fb'))
+    
+    user_email = st.session_state.get("user_email", "")
+    existing_fb = get_user_feedback(user_email)
+    
+    if existing_fb:
+        st.subheader(translate('submit_fb') + " (Edit/Update)")
+        default_name = existing_fb["name"]
+        default_location = existing_fb["location"]
+        default_rating = existing_fb["rating"]
+        default_text = existing_fb["feedback"]
+        btn_text = "Update Feedback"
+    else:
+        st.subheader(translate('submit_fb'))
+        default_name = ""
+        default_location = ""
+        default_rating = 5
+        default_text = ""
+        btn_text = translate('submit')
+        
     with st.form("fb_form"):
-        name = st.text_input(translate('your_name'))
-        location = st.text_input(translate('location'))
-        rating = st.slider(translate('rating'), 1, 5, 5)
-        text = st.text_area(translate('feedback'))
+        name = st.text_input(translate('your_name'), value=default_name)
+        location = st.text_input(translate('location'), value=default_location)
+        rating = st.slider(translate('rating'), 1, 5, value=default_rating)
+        text = st.text_area(translate('feedback'), value=default_text)
 
-        submit = st.form_submit_button(translate('submit'))
+        submit = st.form_submit_button(btn_text)
         if submit and name and text:
-            add_feedback(name, location, rating, text)
+            save_or_update_feedback(user_email, name, location, rating, text)
             st.session_state.user_feedback = get_feedbacks()
-            st.success("Feedback submitted successfully!")
+            st.success("Feedback updated successfully!" if existing_fb else "Feedback submitted successfully!")
             st.rerun()
 
 
