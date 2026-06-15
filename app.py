@@ -612,6 +612,52 @@ def inject_custom_css():
         border: 1px solid {card_border} !important;
         border-radius: 12px;
     }}
+
+    /* Responsive container max-width */
+    .main .block-container {{
+        max-width: 1200px !important;
+        margin: 0 auto !important;
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }}
+
+    /* Media query for mobile responsiveness */
+    @media (max-width: 768px) {{
+        .main-title {{
+            font-size: 2.2rem !important;
+            letter-spacing: -0.5px !important;
+            margin-bottom: 0.5rem !important;
+        }}
+        .sub-title {{
+            font-size: 1.0rem !important;
+            margin-bottom: 1.5rem !important;
+        }}
+        .card {{
+            padding: 1.25rem !important;
+            margin-bottom: 1rem !important;
+        }}
+        .stat-card {{
+            padding: 1rem !important;
+            margin: 0.3rem 0 !important;
+        }}
+        .stat-card h3 {{
+            font-size: 0.95rem !important;
+        }}
+        .stat-card h2 {{
+            font-size: 1.75rem !important;
+        }}
+        .prediction-card {{
+            padding: 1.25rem !important;
+            margin: 1rem 0 !important;
+        }}
+        .stButton>button {{
+            width: 100% !important;
+            padding: 12px 20px !important;
+        }}
+        div[data-testid="stForm"] {{
+            padding: 1rem !important;
+        }}
+    }}
     </style>
     """
     st.markdown(css_code, unsafe_allow_html=True)
@@ -834,58 +880,62 @@ if not st.session_state.user_feedback:
 
 # ---------------- LOGIN PAGE ----------------
 def login_page():
-    st.markdown(f"<h1 class='main-title'>{translate('login')}</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p class='sub-title'>{translate('upload_instruction')}</p>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(f"<h1 class='main-title'>{translate('login')}</h1>", unsafe_allow_html=True)
+        st.markdown(f"<p class='sub-title'>{translate('upload_instruction')}</p>", unsafe_allow_html=True)
 
-    with st.form("login_form"):
-        email = st.text_input(translate('email'))
-        password = st.text_input(translate('password'), type="password")
-        login = st.form_submit_button(translate('login'))
+        with st.form("login_form"):
+            email = st.text_input(translate('email'))
+            password = st.text_input(translate('password'), type="password")
+            login = st.form_submit_button(translate('login'))
 
-        if login:
-            user = check_user(email, password)
-            if user:
-                st.session_state.logged_in = True
-                st.session_state.user_email = email
-                st.session_state.page = "dashboard"
-                st.session_state.prediction_history = get_scans(email)
-                st.session_state.user_feedback = get_feedbacks()
-                st.success("Login successful.")
-                st.rerun()
-            else:
-                st.error("Invalid email or password.")
+            if login:
+                user = check_user(email, password)
+                if user:
+                    st.session_state.logged_in = True
+                    st.session_state.user_email = email
+                    st.session_state.page = "dashboard"
+                    st.session_state.prediction_history = get_scans(email)
+                    st.session_state.user_feedback = get_feedbacks()
+                    st.success("Login successful.")
+                    st.rerun()
+                else:
+                    st.error("Invalid email or password.")
 
-    if st.button(translate('signup')):
-        st.session_state.page = "signup"
-        st.rerun()
+        if st.button(translate('signup')):
+            st.session_state.page = "signup"
+            st.rerun()
 
 # ---------------- SIGNUP PAGE ----------------
 def signup_page():
-    st.markdown(f"<h1 class='main-title'>{translate('signup')}</h1>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(f"<h1 class='main-title'>{translate('signup')}</h1>", unsafe_allow_html=True)
 
-    with st.form("signup_form"):
-        name = st.text_input(translate('name'))
-        email = st.text_input(translate('email'))
-        password = st.text_input(translate('password'), type="password")
-        confirm = st.text_input(translate('confirm_password'), type="password")
-        submit = st.form_submit_button(translate('register'))
+        with st.form("signup_form"):
+            name = st.text_input(translate('name'))
+            email = st.text_input(translate('email'))
+            password = st.text_input(translate('password'), type="password")
+            confirm = st.text_input(translate('confirm_password'), type="password")
+            submit = st.form_submit_button(translate('register'))
 
-        if submit:
-            if not email or not password:
-                st.error("Email and password are required.")
-            elif password == confirm:
-                if add_user(email, name, password):
-                    st.success("Account created successfully.")
-                    st.session_state.page = "login"
-                    st.rerun()
+            if submit:
+                if not email or not password:
+                    st.error("Email and password are required.")
+                elif password == confirm:
+                    if add_user(email, name, password):
+                        st.success("Account created successfully.")
+                        st.session_state.page = "login"
+                        st.rerun()
+                    else:
+                        st.error("Email already exists.")
                 else:
-                    st.error("Email already exists.")
-            else:
-                st.error("Passwords do not match.")
+                    st.error("Passwords do not match.")
 
-    if st.button(translate('back_to_login')):
-        st.session_state.page = "login"
-        st.rerun()
+        if st.button(translate('back_to_login')):
+            st.session_state.page = "login"
+            st.rerun()
 
 # ---------------- LOAD MODEL ----------------
 @st.cache_resource
@@ -1304,38 +1354,40 @@ def show_feedback():
 
 # ---------------- SETTINGS PAGE ----------------
 def show_settings():
-    st.markdown(f"<h1 class='main-title'>{translate('settings')}</h1>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(f"<h1 class='main-title'>{translate('settings')}</h1>", unsafe_allow_html=True)
 
-    st.subheader(translate('preferences'))
-    
-    theme_list = ["Light", "Dark", "System Default"]
-    lang_list = ["English", "Hindi", "Marathi", "Tamil", "Telugu"]
-    
-    current_theme = st.session_state.get("theme", "Light")
-    current_lang = st.session_state.get("language", "English")
-    
-    theme_index = theme_list.index(current_theme) if current_theme in theme_list else 0
-    lang_index = lang_list.index(current_lang) if current_lang in lang_list else 0
-    
-    theme_choice = st.selectbox(translate('theme'), theme_list, index=theme_index)
-    lang_choice = st.selectbox(translate('language'), lang_list, index=lang_index)
+        st.subheader(translate('preferences'))
+        
+        theme_list = ["Light", "Dark", "System Default"]
+        lang_list = ["English", "Hindi", "Marathi", "Tamil", "Telugu"]
+        
+        current_theme = st.session_state.get("theme", "Light")
+        current_lang = st.session_state.get("language", "English")
+        
+        theme_index = theme_list.index(current_theme) if current_theme in theme_list else 0
+        lang_index = lang_list.index(current_lang) if current_lang in lang_list else 0
+        
+        theme_choice = st.selectbox(translate('theme'), theme_list, index=theme_index)
+        lang_choice = st.selectbox(translate('language'), lang_list, index=lang_index)
 
-    st.subheader(translate('data_management'))
-    if st.button(translate('clear_history')):
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM scans WHERE user_email = ?", (st.session_state.user_email,))
-        conn.commit()
-        conn.close()
-        st.session_state.prediction_history = []
-        st.success("Scan history cleared.")
-        st.rerun()
+        st.subheader(translate('data_management'))
+        if st.button(translate('clear_history')):
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM scans WHERE user_email = ?", (st.session_state.user_email,))
+            conn.commit()
+            conn.close()
+            st.session_state.prediction_history = []
+            st.success("Scan history cleared.")
+            st.rerun()
 
-    if st.button(translate('save_settings')):
-        st.session_state.theme = theme_choice
-        st.session_state.language = lang_choice
-        st.success(translate('settings_saved'))
-        st.rerun()
+        if st.button(translate('save_settings')):
+            st.session_state.theme = theme_choice
+            st.session_state.language = lang_choice
+            st.success(translate('settings_saved'))
+            st.rerun()
 
 # ---------------- ROUTING LOGIC ----------------
 if not st.session_state.logged_in:
